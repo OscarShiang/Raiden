@@ -33,12 +33,14 @@ wire fire;
 
 reg [15:0]bullets[7:0];
 
+// keypad module
 Keypad key(clk, rst, keypadRow, keypadCol, playerPos, fire);
 
-Enemy en(clk, rst, enemyPos);
+// enemy module
+Enemy en(keypadTrigger, rst, enemyPos);
 
 
-// dot matrix row scan
+// dot matrixes cycle
 always @(posedge clk) begin
 	if (!rst) begin
 		clk_cnt <= 32'd0;
@@ -70,6 +72,7 @@ always @(posedge div_clk) begin
 	end
 end
 
+// keypad clk cycle
 always @(posedge clk) begin
 	if (!rst) begin
 		keypadDelay <= 0;
@@ -86,6 +89,7 @@ always @(posedge clk) begin
 	end
 end
 
+// bullet fire and move
 always @(posedge keypadTrigger) begin
 	if (!rst) begin
 		bullets[0] = 0;
@@ -113,6 +117,7 @@ always @(posedge keypadTrigger) begin
 	end
 end
 
+// dot matrixes uodate
 always @(posedge clk) begin
 	if (!rst) begin
 		scan_row[0] = 0;
@@ -150,6 +155,5 @@ always @(posedge clk) begin
 		scan_row[scanline] = scan_row[scanline] | bullets[scanline];
 	end
 end
-
 
 endmodule 
