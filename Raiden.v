@@ -28,17 +28,21 @@ reg keypadTrigger;
 
 // player settings
 wire [2:0]playerPos;
-wire [2:0]enemyPos;
+wire [2:0]enemyPos_row;
+wire [1:0]enemyPos_col;
 wire fire;
 
+wire clk_out;
+
+reg [3:0]reborn;
+reg if_shot;
 reg [15:0]bullets[7:0];
 
 // keypad module
 Keypad key(clk, rst, keypadRow, keypadCol, playerPos, fire);
 
 // enemy module
-Enemy en(keypadTrigger, rst, enemyPos);
-
+Enemy en(clk, rst, enemyPos_row,enemyPos_col, clk_out);
 
 // dot matrixes cycle
 always @(posedge clk) begin
@@ -89,6 +93,15 @@ always @(posedge clk) begin
 	end
 end
 
+always @(posedge clk_out) begin
+	if (!rst) begin
+		reborn <= 0;
+	end
+	else if (if_shot) begin
+		reborn <= reborn + 1;
+	end
+end
+
 // bullet fire and move
 always @(posedge keypadTrigger) begin
 	if (!rst) begin
@@ -100,8 +113,11 @@ always @(posedge keypadTrigger) begin
 		bullets[5] = 0;
 		bullets[6] = 0;
 		bullets[7] = 0;
+		
+		if_shot = 0;
 	end
 	else begin
+		
 		bullets[0] = bullets[0] << 1;
 		bullets[1] = bullets[1] << 1;
 		bullets[2] = bullets[2] << 1;
@@ -110,11 +126,23 @@ always @(posedge keypadTrigger) begin
 		bullets[5] = bullets[5] << 1;
 		bullets[6] = bullets[6] << 1;
 		bullets[7] = bullets[7] << 1;
+		
 	end
-	
+
+	if (reborn == 10) begin
+		if_shot = 0;
+	end
+
 	if (fire) begin
 		bullets[playerPos] = bullets[playerPos] | 16'b0000000000001000;
 	end
+
+	if ((bullets[enemyPos_row - 1] & 16'b100000000000000) != 0)
+		if_shot <= 1;
+	if ((bullets[enemyPos_row] & 16'b110000000000000) != 0)
+		if_shot <= 1;
+	if ((bullets[enemyPos_row + 1] & 16'b100000000000000) != 0)
+		if_shot <= 1;
 end
 
 // dot matrixes uodate
@@ -139,19 +167,21 @@ always @(posedge clk) begin
 		scan_row[6] = 0;
 		scan_row[7] = 0;
 
+
 		if (scanline == playerPos - 1)
 			scan_row[scanline] = 16'b0000000000000001 | scan_row[scanline];
 		if (scanline == playerPos)
 			scan_row[scanline] = 16'b0000000000000111 | scan_row[scanline];
 		if (scanline == playerPos + 1)
 			scan_row[scanline] = 16'b0000000000000001 | scan_row[scanline];
-		if (scanline == enemyPos - 1)
-			scan_row[scanline] = 16'b100000000000000 | scan_row[scanline];
-		if (scanline == enemyPos)
-			scan_row[scanline] = 16'b110000000000000 | scan_row[scanline];
-		if (scanline == enemyPos + 1)
-			scan_row[scanline] = 16'b100000000000000 | scan_row[scanline];
-
+		if (!if_shot) begin
+			if (scanline == enemyPos_row - 1)
+				scan_row[scanline] = 16'b100000000000000 | scan_row[scanline];
+			if (scanline == enemyPos_row)
+				scan_row[scanline] = 16'b110000000000000 | scan_row[scanline];
+			if (scanline == enemyPos_row + 1)
+				scan_row[scanline] = 16'b100000000000000 | scan_row[scanline];
+		end
 		scan_row[scanline] = scan_row[scanline] | bullets[scanline];
 	end
 end

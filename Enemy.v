@@ -1,13 +1,33 @@
-module Enemy(clk, rst, enemyPos);
+module Enemy(clk, rst, enemyPos_row, enemyPos_col, div_clk);
 
 input rst, clk;
 
 reg [31:0]random;
 
+output div_clk;
+reg div_clk;
+reg [31:0]clk_cnt;
+
 reg enemy_move;
 reg attacked;
 
-output reg[2:0]enemyPos;
+output reg[2:0]enemyPos_row;
+output reg[2:0]enemyPos_col;
+
+always @(posedge clk) begin
+	if (!rst) begin
+		div_clk <= 0;
+		clk_cnt <= 0;
+	end
+	else  begin
+		if (clk_cnt == 32'd12500000) begin
+			div_clk <= ~div_clk;
+			clk_cnt <= 0;
+		end
+		else 
+			clk_cnt <= clk_cnt + 1;
+	end
+end
 
 // always @(posedge div_clk)
 // begin
@@ -29,11 +49,12 @@ output reg[2:0]enemyPos;
 // end
 
 // dot matrix col assign
-always @(posedge clk)
+always @(posedge div_clk)
 begin
 	if(!rst && !attacked)
 	begin
-		enemyPos = 3;
+		enemyPos_row = 3;
+		enemyPos_col = 1;
 	end
 	else
 	begin
@@ -42,30 +63,28 @@ begin
 
 		if(enemy_move == 0)
 		begin
-			if(enemyPos < 6)
+			if(enemyPos_row < 6)
 			begin
-				enemyPos <= enemyPos + 1;
+				enemyPos_row <= enemyPos_row + 1;
 			end
 			else
 			begin
-				enemyPos <= enemyPos - 1;
+				enemyPos_row <= enemyPos_row - 1;
 			end
 		end
 		else if(enemy_move == 1)
 		begin
-			if(enemyPos > 1)
+			if(enemyPos_row > 1)
 			begin
-				enemyPos <= enemyPos - 1;
+				enemyPos_row <= enemyPos_row - 1;
 			end
 			else
 			begin
-				enemyPos <= enemyPos + 1;
+				enemyPos_row <= enemyPos_row + 1;
 			end
 		end
 	end
 end
-
-
 
 
 endmodule 
