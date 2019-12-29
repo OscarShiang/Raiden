@@ -1,7 +1,7 @@
 `define TimeExpire 32'd1000
 `define TimeExpire_KEY 25'b00010000000000000000000000
 
-module Raiden(row, col, clk, rst, keypadRow, keypadCol);
+module Raiden(row, col, clk, rst, keypadRow, keypadCol, segDec, segUn);
 
 // clock
 input clk, rst;
@@ -38,17 +38,26 @@ reg [3:0]reborn;
 reg if_shot;
 reg [15:0]bullets[7:0];
 
+// score
+reg [31:0]score;
+
+output [6:0]segDec;
+output [6:0]segUn;
+
 // keypad module
 Keypad key(clk, rst, keypadRow, keypadCol, playerPos, fire);
 
 // enemy module
 Enemy en(clk, rst, enemyPos_row,enemyPos_col, clk_out);
 
+// score module
+Score sc(score, segDec, segUn);
+
 // dot matrixes cycle
 always @(posedge clk) begin
 	if (!rst) begin
 		clk_cnt <= 32'd0;
-		div_clk <= 1'b0;
+		div_clk <= 1'b1;
 	end
 	
 	else begin
@@ -80,7 +89,8 @@ end
 always @(posedge clk) begin
 	if (!rst) begin
 		keypadDelay <= 0;
-		keypadTrigger <= 0;
+		keypadTrigger = 0;
+		keypadTrigger = 1;
 	end
 	else begin
 		if (keypadDelay == `TimeExpire_KEY) begin
@@ -100,6 +110,9 @@ always @(posedge clk_out) begin
 	else if (if_shot) begin
 		reborn <= reborn + 1;
 	end
+	else if (!if_shot) begin
+		reborn = 0;
+	end
 end
 
 // bullet fire and move
@@ -115,6 +128,7 @@ always @(posedge keypadTrigger) begin
 		bullets[7] = 0;
 		
 		if_shot = 0;
+		score = 0;
 	end
 	else begin
 		
@@ -129,7 +143,7 @@ always @(posedge keypadTrigger) begin
 		
 	end
 
-	if (reborn == 10) begin
+	if (reborn == 5) begin
 		if_shot = 0;
 	end
 
@@ -137,15 +151,26 @@ always @(posedge keypadTrigger) begin
 		bullets[playerPos] = bullets[playerPos] | 16'b0000000000001000;
 	end
 
-	if ((bullets[enemyPos_row - 1] & 16'b100000000000000) != 0)
-		if_shot <= 1;
-	if ((bullets[enemyPos_row] & 16'b110000000000000) != 0)
-		if_shot <= 1;
-	if ((bullets[enemyPos_row + 1] & 16'b100000000000000) != 0)
-		if_shot <= 1;
+	if (!if_shot) begin
+		if ((bullets[enemyPos_row - 1] & 16'b0100000000000000) != 0) begin
+			if_shot <= 1;
+			bullets[enemyPos_row - 1] = bullets[enemyPos_row - 1] ^ (bullets[enemyPos_row - 1] & 16'b0100000000000000); 
+			score = score + 1;
+		end
+		if ((bullets[enemyPos_row] & 16'b0110000000000000) != 0) begin
+			if_shot <= 1;
+			bullets[enemyPos_row] = bullets[enemyPos_row] ^ (bullets[enemyPos_row] & 16'b0110000000000000); 
+			score = score + 3;
+		end
+		if ((bullets[enemyPos_row + 1] & 16'b0100000000000000) != 0) begin
+			if_shot <= 1;
+			bullets[enemyPos_row + 1] = bullets[enemyPos_row + 1] ^ (bullets[enemyPos_row + 1] & 16'b0100000000000000); 
+			score = score + 1;
+		end
+	end
 end
 
-// dot matrixes uodate
+// dot matrixes update
 always @(posedge clk) begin
 	if (!rst) begin
 		scan_row[0] = 0;
@@ -167,13 +192,15 @@ always @(posedge clk) begin
 		scan_row[6] = 0;
 		scan_row[7] = 0;
 
-
+		// draw player on the scanline
 		if (scanline == playerPos - 1)
 			scan_row[scanline] = 16'b0000000000000001 | scan_row[scanline];
 		if (scanline == playerPos)
 			scan_row[scanline] = 16'b0000000000000111 | scan_row[scanline];
 		if (scanline == playerPos + 1)
 			scan_row[scanline] = 16'b0000000000000001 | scan_row[scanline];
+
+		// draw enemy on the scanline if enemy is alive
 		if (!if_shot) begin
 			if (scanline == enemyPos_row - 1)
 				scan_row[scanline] = 16'b100000000000000 | scan_row[scanline];
@@ -182,6 +209,8 @@ always @(posedge clk) begin
 			if (scanline == enemyPos_row + 1)
 				scan_row[scanline] = 16'b100000000000000 | scan_row[scanline];
 		end
+
+		// draw bullets of the player on the scanline
 		scan_row[scanline] = scan_row[scanline] | bullets[scanline];
 	end
 end

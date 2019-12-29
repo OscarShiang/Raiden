@@ -33,12 +33,12 @@ module Keypad(clk, rst, keypadRow, keypadCol, playPos, fire);
 				keypadDelay = 25'd0;
 				
 				case({keypadRow, keypadCol})
-					8'b1110_1110 : begin
-						keypadBuf = 4'h7;
+					8'b1110_1110 : keypadBuf = 4'h7;
+					8'b1110_1101 : keypadBuf = 4'h4;
+					8'b1110_1011 : begin 
+						keypadBuf = 4'h1;
 						fire <= ~fire;
 					end
-					8'b1110_1101 : keypadBuf = 4'h4;
-					8'b1110_1011 : keypadBuf = 4'h1;
 					8'b1110_0111 : keypadBuf = 4'h0;
 					8'b1101_1110 : keypadBuf = 4'h8;
 					8'b1101_1101 : keypadBuf = 4'h5;

@@ -16,7 +16,7 @@ output reg[2:0]enemyPos_col;
 
 always @(posedge clk) begin
 	if (!rst) begin
-		div_clk <= 0;
+		div_clk <= 1;
 		clk_cnt <= 0;
 	end
 	else  begin
