@@ -32,7 +32,6 @@ reg [15:0] playerRow[2:0];
 reg blink;
 
 //win
-reg win;
 reg final;
 
 // keypad variables
@@ -170,7 +169,7 @@ always @(posedge keypadTrigger) begin
 		
 		blink = ~blink;		
 		
-		if(win) begin
+		if(score >= 15) begin
 			playerRow[0] = playerRow[0] << 1;
 			playerRow[1] = playerRow[1] << 1;
 			playerRow[2] = playerRow[2] << 1;
@@ -192,7 +191,7 @@ always @(posedge keypadTrigger) begin
 		bullets[playerPos] = bullets[playerPos] | 16'b0000000000001000;
 	end
 
-	if (!if_shot & !die) begin
+	if (!if_shot && !die && !final) begin
 		if ((bullets[enemyPos_row - 1] & 16'b0100000000000000) != 0) begin
 			if_shot <= 1;
 			bullets[enemyPos_row - 1] = bullets[enemyPos_row - 1] ^ (bullets[enemyPos_row - 1] & 16'b0100000000000000); 
@@ -250,30 +249,29 @@ always @(posedge clk) begin
 		
 		
 		if(!die) begin
-			// draw player on the scanline
-			if (scanline == playerPos - 1)
-				scan_row[scanline] = 16'b0000000000000001 | scan_row[scanline];
-			if (scanline == playerPos)
-				scan_row[scanline] = 16'b0000000000000111 | scan_row[scanline];
-			if (scanline == playerPos + 1)
-				scan_row[scanline] = 16'b0000000000000001 | scan_row[scanline];	
-					
-			// draw enemy on the scanline if enemy is alive
-			if (!if_shot) begin
-				if (scanline == enemyPos_row - 1)
-					scan_row[scanline] = 16'b100000000000000 | scan_row[scanline];
-				if (scanline == enemyPos_row)
-					scan_row[scanline] = 16'b110000000000000 | scan_row[scanline];
-				if (scanline == enemyPos_row + 1)
-					scan_row[scanline] = 16'b100000000000000 | scan_row[scanline];
+			if(score < 15) begin 
+				// draw player on the scanline
+				if (scanline == playerPos - 1)
+					scan_row[scanline] = 16'b0000000000000001 | scan_row[scanline];
+				if (scanline == playerPos)
+					scan_row[scanline] = 16'b0000000000000111 | scan_row[scanline];
+				if (scanline == playerPos + 1)
+					scan_row[scanline] = 16'b0000000000000001 | scan_row[scanline];	
+						
+				// draw enemy on the scanline if enemy is alive
+				if (!if_shot) begin
+					if (scanline == enemyPos_row - 1)
+						scan_row[scanline] = 16'b100000000000000 | scan_row[scanline];
+					if (scanline == enemyPos_row)
+						scan_row[scanline] = 16'b110000000000000 | scan_row[scanline];
+					if (scanline == enemyPos_row + 1)
+						scan_row[scanline] = 16'b100000000000000 | scan_row[scanline];
+				end
+				
+				// draw bullets of the player on the scanline
+				scan_row[scanline] = scan_row[scanline] | bullets[scanline] | enemy_Bullet[scanline];
 			end
-			
-			// draw bullets of the player on the scanline
-			scan_row[scanline] = scan_row[scanline] | bullets[scanline] | enemy_Bullet[scanline];
-		end
-		else begin
-			if(score > 15 && !final) begin
-				win = 1;
+			else if(score >= 15 && !final)begin
 				scan_row[0] = 16'b1110000000000000;
 				scan_row[1] = 16'b1111000000000000;
 				scan_row[2] = 16'b1111000000000000;
@@ -292,28 +290,28 @@ always @(posedge clk) begin
 						scan_row[scanline] = playerRow[2] | scan_row[scanline];
 				end
 			end
-			else if(die)begin
-				scan_row[7] = 16'b0000000000000000;
-				scan_row[6] = 16'b0000000000000000;
-				scan_row[5] = 16'b0111001001110100;
-				scan_row[4] = 16'b0100010100100100;
-				scan_row[3] = 16'b0111011100100100;
-				scan_row[2] = 16'b0100010100100100;
-				scan_row[1] = 16'b0100010101110111;
-				scan_row[0] = 16'b0000000000000000;
-				
-				if(blink) begin
-					scan_row[0] = 0;
-					scan_row[1] = 0;
-					scan_row[2] = 0;
-					scan_row[3] = 0;
-					scan_row[4] = 0;
-					scan_row[5] = 0;
-					scan_row[6] = 0;
-					scan_row[7] = 0;
-				end
+		end
+	
+		else if(die)begin
+			scan_row[7] = 16'b0000000000000000;
+			scan_row[6] = 16'b0000000000000000;
+			scan_row[5] = 16'b0111001001110100;
+			scan_row[4] = 16'b0100010100100100;
+			scan_row[3] = 16'b0111011100100100;
+			scan_row[2] = 16'b0100010100100100;
+			scan_row[1] = 16'b0100010101110111;
+			scan_row[0] = 16'b0000000000000000;
 			
-			end
+			if(blink) begin
+				scan_row[0] = 0;
+				scan_row[1] = 0;
+				scan_row[2] = 0;
+				scan_row[3] = 0;
+				scan_row[4] = 0;
+				scan_row[5] = 0;
+				scan_row[6] = 0;
+				scan_row[7] = 0;
+			end	
 		end
 	end
 end
@@ -344,7 +342,7 @@ always @ (posedge clk) begin
 			enemy_Bullet[7] = enemy_Bullet[7] >> 1;
 			
 			
-			if(isfire  & !if_shot) begin
+			if(isfire  && !if_shot) begin
 				enemy_Bullet[enemyPos_row] = enemy_Bullet[enemyPos_row] | 16'b0001000000000000;
 			end
 		end
