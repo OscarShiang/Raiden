@@ -1,4 +1,4 @@
-module Enemy(clk, rst, enemyPos_row, enemyPos_col, div_clk);
+module Enemy(clk, rst, enemyPos_row, enemyPos_col, div_clk, isfire);
 
 input rst, clk;
 
@@ -13,6 +13,12 @@ reg attacked;
 
 output reg[2:0]enemyPos_row;
 output reg[2:0]enemyPos_col;
+
+
+output isfire;
+reg isfire;
+reg [1:0] tmp;
+
 
 always @(posedge clk) begin
 	if (!rst) begin
@@ -61,6 +67,11 @@ begin
 		random = random * 1103515245 + 12345;
 		enemy_move = ((random/65536)%32768) % 2;
 
+
+		random = random * 1103515245 + 12345;
+		tmp = ((random/65536)%32768) % 3;
+		
+		
 		if(enemy_move == 0)
 		begin
 			if(enemyPos_row < 6)
@@ -83,6 +94,15 @@ begin
 				enemyPos_row <= enemyPos_row + 1;
 			end
 		end
+		
+		
+		if(tmp == 1) begin
+			isfire = 1;
+		end
+		else begin
+			isfire = 0; 
+		end
+		
 	end
 end
 
